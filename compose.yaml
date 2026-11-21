@@ -1,0 +1,59 @@
+name: taskflow
+
+x-taskflow: &taskflow
+  image: taskflow:local
+  build:
+    context: .
+    dockerfile: Dockerfile
+  init: true
+  environment: &taskflow-environment
+    ASPNETCORE_ENVIRONMENT: Development
+    ASPNETCORE_HTTP_PORTS: "8080"
+    ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=taskflow;Username=taskflow;Password=${POSTGRES_PASSWORD:?Run node scripts/setup.mjs first}"
+    Jwt__Key: "${JWT_KEY:?Run node scripts/setup.mjs first}"
+    Demo__Enabled: "${DEMO_ENABLED:-true}"
+    Demo__Password: "${DEMO_PASSWORD:?Run node scripts/setup.mjs first}"
+    HolidayApi__Mode: "${HOLIDAY_API_MODE:-Stub}"
+    HolidayApi__StubScenario: "${HOLIDAY_API_STUB_SCENARIO:-Success}"
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Run node scripts/setup.mjs first}"
+    volumes:
+      # PostgreSQL 18 stores PGDATA at /var/lib/postgresql/18/docker.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    <<: *taskflow
+    command: ["--migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  app:
+    <<: *taskflow
+    ports:
+      - "127.0.0.1:${TASKFLOW_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

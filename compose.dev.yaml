@@ -1,0 +1,5 @@
+# Only the database is published for a host-based .NET development server.
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${TASKFLOW_DB_PORT:-55432}:5432"
