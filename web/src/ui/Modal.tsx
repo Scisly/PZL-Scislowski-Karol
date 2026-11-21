@@ -15,11 +15,67 @@ import { Button, ErrorMessage } from "./Feedback";
 import s from "./ui.module.css";
 type ModalContextValue = {
   close: () => void;
+  guard: (action: () => void) => void;
   register: (id: string, dirty: boolean) => void;
 };
 const ModalContext = createContext<ModalContextValue | null>(null);
 let openDialogs = 0;
 let originalOverflow = "";
+function useDiscardGuard(dirty: boolean) {
+  const [action, setAction] = useState<(() => void) | null>(null);
+  const request = useCallback(
+    (next: () => void) => {
+      if (dirty) setAction(() => next);
+      else next();
+    },
+    [dirty],
+  );
+  const confirmation = action ? (
+    <Confirm
+      title="Odrzucić niezapisane zmiany?"
+      description="Wpisane dane nie zostaną zapisane."
+      action="Odrzuć zmiany"
+      onClose={() => setAction(null)}
+      onConfirm={async () => {
+        action();
+        setAction(null);
+      }}
+    />
+  ) : null;
+  return { request, confirmation };
+}
+export function ModalAction({
+  onAction,
+  children,
+  dirty,
+  disabled = false,
+  variant = "outline",
+}: {
+  onAction: () => void;
+  children: ReactNode;
+  dirty?: boolean;
+  disabled?: boolean;
+  variant?: "outline" | "ghost";
+}) {
+  const context = useContext(ModalContext);
+  const discard = useDiscardGuard(dirty ?? false);
+  return (
+    <>
+      <Button
+        variant={variant}
+        disabled={disabled}
+        onClick={() => {
+          if (dirty !== undefined) discard.request(onAction);
+          else if (context) context.guard(onAction);
+          else onAction();
+        }}
+      >
+        {children}
+      </Button>
+      {discard.confirmation}
+    </>
+  );
+}
 export function useModalDirty(dirty: boolean) {
   const context = useContext(ModalContext);
   const register = context?.register;
@@ -58,8 +114,8 @@ export function Modal({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const id = useId();
-  const [discard, setDiscard] = useState(false);
   const [childDirty, setChildDirty] = useState<Set<string>>(() => new Set());
+  const discard = useDiscardGuard(dirty || childDirty.size > 0);
   const register = useCallback(
     (key: string, value: boolean) =>
       setChildDirty((current) => {
@@ -87,11 +143,12 @@ export function Modal({
       previous?.focus();
     };
   }, []);
-  const close = useCallback(() => {
-    if (dirty || childDirty.size) setDiscard(true);
-    else onClose();
-  }, [dirty, childDirty.size, onClose]);
-  const context = useMemo(() => ({ close, register }), [close, register]);
+  const guard = discard.request;
+  const close = useCallback(() => guard(onClose), [guard, onClose]);
+  const context = useMemo(
+    () => ({ close, register, guard }),
+    [close, register, guard],
+  );
   return (
     <ModalContext.Provider value={context}>
       <dialog
@@ -130,15 +187,7 @@ export function Modal({
           </button>
         </div>
         <div className={s.modalBody}>{children}</div>
-        {discard ? (
-          <Confirm
-            title="Odrzucić niezapisane zmiany?"
-            description="Wpisane dane nie zostaną zapisane."
-            action="Odrzuć zmiany"
-            onClose={() => setDiscard(false)}
-            onConfirm={async () => onClose()}
-          />
-        ) : null}
+        {discard.confirmation}
       </dialog>
     </ModalContext.Provider>
   );

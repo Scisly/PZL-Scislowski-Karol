@@ -49,4 +49,80 @@ describe("session recovery", () => {
     expect(screen.getByLabelText("Szkic zadania")).toHaveValue("Zachowaj opis");
     expect(call).toHaveBeenCalledTimes(2);
   });
+  it("ends an already expired session and clears cached protected data", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const account = {
+      id: "u1",
+      displayName: "Student",
+      email: "student@example.com",
+      roles: ["Student"],
+    };
+    vi.spyOn(transport, "api").mockImplementation(async (path) => {
+      if (path === "/auth/me") return account as never;
+      throw new transport.ApiError(401);
+    });
+    const csrf = vi
+      .spyOn(transport, "refreshCsrf")
+      .mockResolvedValue("anonymous-token");
+    client.setQueryData(["projects"], [{ id: "private-project" }]);
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider>
+          <Draft />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByLabelText("Szkic zadania");
+    window.dispatchEvent(new Event("session-expired"));
+    await user.click(
+      await screen.findByRole("button", { name: "Zakończ sesję" }),
+    );
+    expect(await screen.findByText("Sesja zakończona")).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Zaloguj się ponownie" }),
+    ).not.toBeInTheDocument();
+    expect(client.getQueryData(["projects"])).toBeUndefined();
+    expect(csrf).toHaveBeenCalled();
+  });
+  it("shows logout server failures in reauthentication while retaining the draft", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const account = {
+      id: "u1",
+      displayName: "Student",
+      email: "student@example.com",
+      roles: ["Student"],
+    };
+    vi.spyOn(transport, "api").mockImplementation(async (path) => {
+      if (path === "/auth/me") return account as never;
+      throw new transport.ApiError(500);
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider>
+          <Draft />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+    await user.type(
+      await screen.findByLabelText("Szkic zadania"),
+      "Zachowany szkic",
+    );
+    window.dispatchEvent(new Event("session-expired"));
+    await user.click(
+      await screen.findByRole("button", { name: "Zakończ sesję" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Nie udało się wykonać operacji",
+    );
+    expect(screen.getByLabelText("Szkic zadania")).toHaveValue(
+      "Zachowany szkic",
+    );
+    expect(screen.getByRole("button", { name: "Zakończ sesję" })).toBeEnabled();
+  });
 });

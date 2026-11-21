@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
     if (message.type() !== "error") return;
     const expectedUnauthorized =
       message.text().includes("401") &&
-      /\/api\/(auth\/me|deadline-advice)/.test(message.location().url);
+      /\/api\/(auth\/(me|logout)|deadline-advice)/.test(message.location().url);
     if (!expectedUnauthorized) errors.push(message.text());
   });
 });
@@ -162,8 +162,35 @@ test("owner completes project, task, comment, filter, archive/restore and deleti
     await dialog
       .getByLabel("Dodaj komentarz")
       .fill("Ustalono zakres implementacji.");
+    await dialog.getByRole("button", { name: "Edytuj zadanie" }).click();
+    const discard = page.getByRole("dialog", {
+      name: "Odrzucić niezapisane zmiany?",
+      exact: true,
+    });
+    await expect(discard).toBeVisible();
+    await discard.getByRole("button", { name: "Anuluj", exact: true }).click();
+    await expect(dialog.getByLabel("Dodaj komentarz")).toHaveValue(
+      "Ustalono zakres implementacji.",
+    );
     await dialog
       .getByRole("button", { name: "Dodaj komentarz", exact: true })
+      .click();
+    await expect(
+      dialog.getByText("Ustalono zakres implementacji.", { exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Edytuj", exact: true }).click();
+    await dialog
+      .getByLabel("Edytuj komentarz")
+      .fill("Niezapisana zmiana komentarza");
+    await dialog.getByRole("button", { name: "Anuluj", exact: true }).click();
+    await expect(discard).toBeVisible();
+    await discard.getByRole("button", { name: "Anuluj", exact: true }).click();
+    await expect(dialog.getByLabel("Edytuj komentarz")).toHaveValue(
+      "Niezapisana zmiana komentarza",
+    );
+    await dialog.getByRole("button", { name: "Anuluj", exact: true }).click();
+    await discard
+      .getByRole("button", { name: "Odrzuć zmiany", exact: true })
       .click();
     await expect(
       dialog.getByText("Ustalono zakres implementacji.", { exact: true }),
@@ -427,6 +454,47 @@ test("expired cookie refreshes anonymous CSRF before reauth and preserves the ta
         exact: true,
       }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Nowe zadanie", exact: true })
+      .click();
+    const abandonedDraft = page.getByRole("dialog", {
+      name: "Nowe zadanie",
+      exact: true,
+    });
+    await abandonedDraft
+      .getByLabel("Tytuł zadania")
+      .fill("Szkic porzucony przy zakończeniu sesji");
+    await context.clearCookies({ name: "TaskFlow.Session" });
+    const expiredAgain = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/deadline-advice") &&
+        response.status() === 401,
+    );
+    await abandonedDraft.getByLabel("Termin zadania").fill("2027-05-18");
+    await expiredAgain;
+    const endSession = page.getByRole("dialog", {
+      name: "Zaloguj się ponownie",
+      exact: true,
+    });
+    const alreadyLoggedOut = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/auth/logout") &&
+        response.status() === 401,
+    );
+    await endSession
+      .getByRole("button", { name: "Zakończ sesję", exact: true })
+      .click();
+    await alreadyLoggedOut;
+    await expect(
+      page.getByRole("heading", {
+        name: "Zaloguj się do TaskFlow",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Moje zadania", exact: true }),
+    ).toHaveCount(0);
   } finally {
     await cleanupProject(request, name);
   }

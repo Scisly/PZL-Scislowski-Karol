@@ -13,7 +13,7 @@ import { dateLabel, initials, priorities, statuses, timestamp } from "../types";
 import { useNotice, useSession } from "../context";
 import { useRefresh } from "../hooks";
 import { Field } from "../ui/Fields";
-import { Modal, Confirm } from "../ui/Modal";
+import { Modal, ModalAction, Confirm } from "../ui/Modal";
 import {
   Badge,
   Button,
@@ -76,10 +76,10 @@ export function TaskDetail({
             <h3>{task.title}</h3>
             {!project.isArchived ? (
               <div className={s.detailActions}>
-                <Button variant="outline" onClick={() => onEdit(task)}>
+                <ModalAction onAction={() => onEdit(task)}>
                   <Pencil size={15} />
                   Edytuj zadanie
-                </Button>
+                </ModalAction>
                 <Button variant="ghost" onClick={() => setRemove(true)}>
                   <Trash2 size={15} />
                   Usuń
@@ -268,9 +268,13 @@ function CommentForm({
       />
       <div className={ui.actions}>
         {onClose ? (
-          <Button variant="outline" onClick={onClose} disabled={form.busy}>
+          <ModalAction
+            onAction={onClose}
+            dirty={form.dirty}
+            disabled={form.busy}
+          >
             Anuluj
-          </Button>
+          </ModalAction>
         ) : null}
         <Button type="submit" busy={form.busy}>
           {comment ? "Zapisz komentarz" : "Dodaj komentarz"}

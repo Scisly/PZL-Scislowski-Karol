@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, X } from "lucide-react";
-import { api, body, refreshCsrf, resetCsrf } from "./api";
+import { api, ApiError, body, refreshCsrf, resetCsrf } from "./api";
 import type { User } from "./types";
 import { Modal } from "./ui/Modal";
 import { Field, PasswordField } from "./ui/Fields";
@@ -80,8 +80,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }
   async function logout() {
-    await api("/auth/logout", { method: "POST" });
-    await refreshCsrf();
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+    }
+    resetCsrf();
+    // A 204 or 401 confirms there is no session to retain. A failed CSRF refresh
+    // must not retain private cache; the next authentication obtains a new token.
+    try {
+      await refreshCsrf();
+    } catch {
+      resetCsrf();
+    }
     setExpired(false);
     client.clear();
     client.setQueryData(["session"], null);
@@ -116,6 +127,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 }
 function Reauthenticate({ onLogout }: { onLogout: () => Promise<void> }) {
   const { user, login } = useSession();
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState<unknown>();
   const form = useForm(
     { email: user?.email ?? "", password: "" },
     { email: { required: true, email: true }, password: { required: true } },
@@ -129,6 +142,7 @@ function Reauthenticate({ onLogout }: { onLogout: () => Promise<void> }) {
     >
       <form noValidate ref={form.formRef} onSubmit={form.submit}>
         <ErrorMessage error={form.error} />
+        <ErrorMessage error={logoutError} />
         <Field
           label="E-mail"
           type="email"
@@ -144,10 +158,26 @@ function Reauthenticate({ onLogout }: { onLogout: () => Promise<void> }) {
           {...form.field("password")}
         />
         <div className={s.actions}>
-          <Button variant="outline" onClick={() => void onLogout()}>
+          <Button
+            variant="outline"
+            busy={logoutBusy}
+            disabled={form.busy}
+            onClick={async () => {
+              if (logoutBusy) return;
+              setLogoutBusy(true);
+              setLogoutError(undefined);
+              try {
+                await onLogout();
+              } catch (error) {
+                setLogoutError(error);
+              } finally {
+                setLogoutBusy(false);
+              }
+            }}
+          >
             Zakończ sesję
           </Button>
-          <Button type="submit" busy={form.busy}>
+          <Button type="submit" busy={form.busy} disabled={logoutBusy}>
             Zaloguj się
           </Button>
         </div>
