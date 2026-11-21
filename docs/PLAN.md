@@ -6,6 +6,8 @@ Indywidualny projekt zaliczeniowy Karola Scisłowskiego: współpraca zespołów
 
 Aktualizacja decyzji autora z 2026-11-21: repozytorium **publiczne** na koncie Karola (`Scisly`), https://github.com/Scisly/PZL-Scislowski-Karol. Zastępuje to pierwotne założenie prywatnego repozytorium. Publicznie dostępny jest kod aplikacji i opracowana dokumentacja; materiały prowadzącego i lokalne sekrety pozostają ignorowane.
 
+Konwencja nazw branchy: **feature/**, zgodnie z późniejszą decyzją autora. Wcześniejsze branche przemianowano lokalnie i na GitHub bez przepisywania commitów.
+
 ## Zakres
 
 Rejestracja i logowanie, projekty z przedmiotem i wymaganym terminem, członkostwo, zadania z opcjonalnym przypisaniem i terminem, Kanban bez przeciągania, lista i filtry, komentarze, archiwizacja/przywracanie oraz lista kont dla administratora. Interfejs polski, jasny i responsywny. Bez e-maili, załączników, czatu, SSO, realtime i transferu własności.
