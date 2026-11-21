@@ -18,4 +18,17 @@ Wynik rzeczywisty: **21 jednostkowych oraz 10 integracyjnych, 0 niepowodzeń i 0
 | Powielanie projekcji projektu | List/Get powtarzają konstrukcję ProjectDto | Możliwość przyszłego wydzielenia wspólnej projekcji; nie trzeba naprawiać wszystkiego w jednym PR |
 | Mieszane odpowiedzialności kontrolera kont | Me pobiera i mapuje konto; Logout bezpośrednio steruje sesją | Przyszłe wydzielenie do kontraktu usługi kont |
 
-Problemy stwierdzono w działającym kodzie. Nie dodawano celowo code smells. Minimum trzy pierwsze są objęte bieżącą refaktoryzacją, z Extract Class i testem regresji korelacji. Analiza nazw, nullable i warnings jest częścią kompilacji z TreatWarningsAsErrors; wyniki po zmianie zostaną dopisane po rzeczywistym sprawdzeniu.
+Problemy stwierdzono w działającym kodzie. Nie dodawano celowo code smells. Naprawiono trzy pierwsze, z Extract Class i testem regresji korelacji. Pozostałe dwie obserwacje nie blokują zakresu wersji1 i są świadomie pozostawione do dalszego porządkowania.
+
+## Stan po refaktoryzacji
+
+- `RequestTrace` i wydzielony `RequestLoggingMiddleware` używają jednego identyfikatora w odpowiedzi, Problem Details i zakresie logowania. `Response.OnStarting` zachowuje nagłówek również po obsłudze wyjątku.
+- `UserDirectoryService` pobiera konta i role dwoma zapytaniami, zastępując ścieżkę1+N odczytów. To porównanie struktury kodu, bez deklaracji zmierzonego przyspieszenia czasowego.
+- `ListMembersAsync` używa dwóch projekcji, bez ładowania zadań, zamiast czterech zapytań i materializacji całego agregatu.
+- Rzeczywisty test korelacji najpierw nie przeszedł: nagłówek miał `0HNQ...`, a Problem Details `00-...`. Po poprawce przeszedł.
+- Weryfikacja po zmianie: **21 unit +12 integracyjnych, wszystkie poprawne**, oraz osobny test regresji1/1. Dwa dodane scenariusze integracyjne sprawdzają role katalogu administratora bez obejścia projektów oraz prawa autora/moderatora komentarzy.
+- `dotnet format src/TaskFlow.Api/TaskFlow.Api.csproj --verify-no-changes --no-restore --verbosity minimal`: exit0. Analizatory nie wykazały ostrzeżeń wymagających wyciszeń; nullable pozostaje włączone.
+
+## Dodatkowy przegląd specyfikacji
+
+Niezależny kontekst przeglądu AI wykrył dwa P2: tablica dostawcy zawierająca null powodowała500 zamiast503, a ponowne logowanie po wygaśnięciu cookie używało tokenu CSRF poprzedniej tożsamości. Dodano rzeczywiste regresje przed poprawkami. Walidacja odpowiedzi dostawcy obejmuje strukturę i zgodność roku, zachowując poprawny rok1. Zestaw jednostkowy po rozszerzeniu ma28 przechodzących przypadków. Przepływ ponownego logowania jest też sprawdzany w Playwright po usunięciu wyłącznie cookie sesji.

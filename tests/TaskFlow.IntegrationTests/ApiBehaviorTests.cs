@@ -61,6 +61,13 @@ public sealed class ApiBehaviorTests(TaskFlowFactory factory)
         var token = (await ApiUser.ReadAsync(issued)).GetProperty("accessToken").GetString();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/projects")).StatusCode);
+        var jwtUser = await client.GetFromJsonAsync<JsonElement>("/api/auth/me");
+        Assert.Equal(user.Id, jwtUser.GetProperty("id").GetString());
+        var createdWithoutCsrf = await client.PostAsJsonAsync("/api/projects", new
+        {
+            name = "Projekt przez JWT", courseName = "API", deadline = TaskFlowFactory.ReferenceDate.AddDays(20)
+        });
+        Assert.Equal(HttpStatusCode.Created, createdWithoutCsrf.StatusCode);
         // Cookie is valid; a malformed Authorization header must not bypass JWT validation.
         user.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "invalid.jwt.token");
         Assert.Equal(HttpStatusCode.Unauthorized, (await user.Client.GetAsync("/api/projects")).StatusCode);
@@ -123,6 +130,40 @@ public sealed class ApiBehaviorTests(TaskFlowFactory factory)
     }
 
     [Fact]
+    public async Task AdministratorReadsAccountRolesButDoesNotBypassProjectMembership()
+    {
+        using var owner = await factory.RegisterAsync();
+        var projectId = (await owner.CreateProjectAsync()).GetProperty("id").GetString();
+        using var admin = factory.NewClient();
+        var login = await ApiUser.SendAsync(admin, HttpMethod.Post, "/api/auth/login", new
+        {
+            email = "admin@taskflow.local", password = factory.DemoPassword
+        });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var directory = await admin.GetFromJsonAsync<JsonElement>("/api/admin/users");
+        var adminRow = directory.EnumerateArray().Single(item => item.GetProperty("email").GetString() == "admin@taskflow.local");
+        Assert.Contains(adminRow.GetProperty("roles").EnumerateArray(), role => role.GetString() == "Admin");
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/projects/{projectId}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task CommentEditingBelongsToAuthorAndOwnerMayModerateDeletion()
+    {
+        using var owner = await factory.RegisterAsync();
+        using var member = await factory.RegisterAsync();
+        var projectId = (await owner.CreateProjectAsync()).GetProperty("id").GetString()!;
+        Assert.Equal(HttpStatusCode.Created, (await owner.SendAsync(HttpMethod.Post, $"/api/projects/{projectId}/members", new { email = member.Email })).StatusCode);
+        var taskId = (await owner.CreateTaskAsync(projectId)).GetProperty("id").GetString();
+        var memberComment = await member.SendAsync(HttpMethod.Post, $"/api/tasks/{taskId}/comments", new { content = "Komentarz członka" });
+        var memberCommentId = (await ApiUser.ReadAsync(memberComment)).GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.SendAsync(HttpMethod.Put, $"/api/comments/{memberCommentId}", new { content = "Podmieniona treść" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.SendAsync(HttpMethod.Delete, $"/api/comments/{memberCommentId}")).StatusCode);
+        var ownerComment = await owner.SendAsync(HttpMethod.Post, $"/api/tasks/{taskId}/comments", new { content = "Komentarz właściciela" });
+        var ownerCommentId = (await ApiUser.ReadAsync(ownerComment)).GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.SendAsync(HttpMethod.Delete, $"/api/comments/{ownerCommentId}")).StatusCode);
+    }
+
+    [Fact]
     public async Task InvalidRequestAndMissingResourceReturnProblemDetails()
     {
         using var owner = await factory.RegisterAsync();
@@ -135,6 +176,7 @@ public sealed class ApiBehaviorTests(TaskFlowFactory factory)
             var problem = await ApiUser.ReadAsync(response);
             Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
             Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("errorCode").GetString()));
+            Assert.Equal(response.Headers.GetValues("X-Trace-Id").Single(), problem.GetProperty("traceId").GetString());
         }
     }
 

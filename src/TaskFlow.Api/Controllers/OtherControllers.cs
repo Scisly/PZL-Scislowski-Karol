@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TaskFlow.Api.Auth;
-using TaskFlow.Api.Contracts;
-using TaskFlow.Api.Data;
 using TaskFlow.Api.Integrations;
+using TaskFlow.Api.Services;
 
 namespace TaskFlow.Api.Controllers;
 
@@ -17,14 +14,9 @@ public sealed class DeadlineAdviceController(DeadlineAdvisor advisor) : Controll
 }
 
 [ApiController, Authorize(Roles = "Admin"), Route("api/admin/users")]
-public sealed class AdminUsersController(AppDbContext db, AuthService auth) : ControllerBase
+public sealed class AdminUsersController(IUserDirectoryService users) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
-    {
-        var accounts = await db.Users.AsNoTracking().OrderBy(x => x.DisplayName).ToListAsync(ct);
-        var result = new List<UserDto>();
-        foreach (var user in accounts) result.Add(await auth.ToDtoAsync(user));
-        return Ok(result);
-    }
+        => Ok(await users.ListAsync(ct));
 }

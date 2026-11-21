@@ -15,8 +15,8 @@ public sealed class NagerHolidayClient(HttpClient httpClient, ILogger<NagerHolid
                 logger.LogWarning("Holiday provider returned {StatusCode} for year {Year}", (int)response.StatusCode, year);
                 throw new ApiException(503, "holiday_service_unavailable", "Kalendarz świąt jest chwilowo niedostępny.");
             }
-            var holidays = await response.Content.ReadFromJsonAsync<NagerHoliday[]>(cancellationToken) ?? throw new JsonException("Missing holiday array.");
-            if (holidays.Any(x => x.Date.Year != year || x.CountryCode != "PL" || string.IsNullOrWhiteSpace(x.Name) || x.HolidayTypes is null)) throw new JsonException("Invalid holiday model.");
+            var responseItems = await response.Content.ReadFromJsonAsync<NagerHoliday?[]>(cancellationToken) ?? throw new JsonException("Missing holiday array.");
+            var holidays = responseItems.Select(x => ValidateHoliday(x, year)).ToArray();
             logger.LogInformation("Holiday provider returned calendar for year {Year}", year);
             return holidays.Where(x => x.NationalHoliday && x.HolidayTypes.Contains("Public", StringComparer.Ordinal)).Select(x => new PublicHoliday(x.Date, x.Name)).ToArray();
         }
@@ -32,6 +32,14 @@ public sealed class NagerHolidayClient(HttpClient httpClient, ILogger<NagerHolid
         {
             throw new ApiException(503, "holiday_invalid_response", "Kalendarz świąt zwrócił nieprawidłowe dane.");
         }
+    }
+
+    private static NagerHoliday ValidateHoliday(NagerHoliday? holiday, int year)
+    {
+        if (holiday is null || holiday.Date.Year != year || holiday.CountryCode != "PL" ||
+            string.IsNullOrWhiteSpace(holiday.Name) || holiday.HolidayTypes is null || holiday.HolidayTypes.Any(string.IsNullOrWhiteSpace))
+            throw new JsonException("Invalid holiday model.");
+        return holiday;
     }
 
     private sealed record NagerHoliday

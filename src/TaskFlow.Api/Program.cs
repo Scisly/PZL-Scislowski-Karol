@@ -16,6 +16,7 @@ using TaskFlow.Domain;
 var migrateOnly = args.Contains("--migrate", StringComparer.Ordinal);
 var builder = WebApplication.CreateBuilder(args.Where(x => x != "--migrate").ToArray());
 var configuration = builder.Configuration;
+builder.Logging.AddJsonConsole(options => { options.IncludeScopes = true; options.UseUtcTimestamp = true; options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; });
 var jwtKey = configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
     throw new InvalidOperationException("Configure Jwt:Key with at least 32 bytes using environment variables or local user secrets.");
@@ -91,6 +92,7 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IUserDirectoryService, UserDirectoryService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DeadlineAdvisor>();
 builder.Services.AddTransient<HolidayStubHandler>();
@@ -131,6 +133,7 @@ if (migrateOnly)
     await SeedData.InitializeAsync(app.Services);
     return;
 }
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages(async context =>
 {
@@ -139,12 +142,6 @@ app.UseStatusCodePages(async context =>
         var status = context.HttpContext.Response.StatusCode;
         await ApiProblems.WriteAsync(context.HttpContext, status, status == 404 ? "not_found" : status == 400 ? "validation_error" : "request_failed");
     }
-});
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Trace-Id"] = context.TraceIdentifier;
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    await next(context);
 });
 app.UseDefaultFiles();
 app.UseStaticFiles();
