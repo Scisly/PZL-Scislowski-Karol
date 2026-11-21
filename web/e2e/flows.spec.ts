@@ -379,11 +379,27 @@ test("registration starts a student session and admin sees read-only accounts", 
     page.getByRole("heading", { name: "Tu zaczyna się wspólna praca" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Wyloguj się", exact: true }).click();
+  const loggedOut = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/auth/logout") &&
+      response.request().method() === "POST" &&
+      response.status() === 204,
+  );
   await page
     .getByRole("dialog")
     .last()
     .getByRole("button", { name: "Wyloguj się", exact: true })
     .click();
+  await loggedOut;
+  // Let logout apply its cookie and complete the client-side session transition
+  // before a new navigation can abort it.
+  await expect(
+    page.getByRole("heading", {
+      name: "Zaloguj się do TaskFlow",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await login(page, "admin@taskflow.local");
   await page.getByRole("link", { name: "Konta użytkowników" }).click();
   await expect(

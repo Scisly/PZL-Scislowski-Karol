@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as transport from "./api";
 import { SessionProvider, useSession } from "./context";
@@ -17,6 +17,101 @@ function Draft() {
   );
 }
 describe("session recovery", () => {
+  it("does not restore an earlier account when its session refetch finishes after logout", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30000 } },
+    });
+    const account = {
+      id: "u1",
+      displayName: "Student",
+      email: "student@example.com",
+      roles: ["Student"],
+    };
+    client.setQueryData(["session"], account);
+    let finishSessionCheck!: (value: typeof account) => void;
+    const sessionCheck = new Promise<typeof account>((resolve) => {
+      finishSessionCheck = resolve;
+    });
+    vi.spyOn(transport, "api").mockImplementation(async (path) =>
+      path === "/auth/me" ? (sessionCheck as never) : (undefined as never),
+    );
+    vi.spyOn(transport, "refreshCsrf").mockResolvedValue("anonymous-token");
+    function SessionRoute() {
+      const { user: account, logout } = useSession();
+      return account ? (
+        <button onClick={() => void logout()}>Wyloguj testowo</button>
+      ) : (
+        <p>Sesja zakończona</p>
+      );
+    }
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider>
+          <SessionRoute />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+    const pendingCheck = client.refetchQueries({ queryKey: ["session"] });
+    await user.click(screen.getByRole("button", { name: "Wyloguj testowo" }));
+    expect(await screen.findByText("Sesja zakończona")).toBeVisible();
+    await act(async () => {
+      finishSessionCheck(account);
+      await pendingCheck;
+    });
+    expect(screen.getByText("Sesja zakończona")).toBeVisible();
+    expect(client.getQueryData(["session"])).toBeNull();
+  });
+  it("logs out without restarting a mounted protected query", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30000 } },
+    });
+    const account = {
+      id: "u1",
+      displayName: "Student",
+      email: "student@example.com",
+      roles: ["Student"],
+    };
+    vi.spyOn(transport, "api").mockImplementation(async (path) =>
+      path === "/auth/me" ? (account as never) : (undefined as never),
+    );
+    vi.spyOn(transport, "refreshCsrf").mockResolvedValue("anonymous-token");
+    const fetchProjects = vi.fn(async () => [{ id: "private-project" }]);
+    function ProtectedProjects() {
+      const { logout } = useSession();
+      const projects = useQuery({
+        queryKey: ["projects"],
+        queryFn: fetchProjects,
+      });
+      return (
+        <>
+          <p>{projects.data?.[0]?.id}</p>
+          <button onClick={() => void logout()}>Wyloguj testowo</button>
+        </>
+      );
+    }
+    function SessionRoute() {
+      return useSession().user ? (
+        <ProtectedProjects />
+      ) : (
+        <p>Sesja zakończona</p>
+      );
+    }
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider>
+          <SessionRoute />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("private-project");
+    expect(fetchProjects).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Wyloguj testowo" }));
+    expect(fetchProjects).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Sesja zakończona")).toBeVisible();
+    expect(client.getQueryData(["projects"])).toBeUndefined();
+  });
   it("keeps the mounted draft and reauthenticates when background session check expires", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({
