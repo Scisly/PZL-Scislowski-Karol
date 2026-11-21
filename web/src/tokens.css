@@ -1,0 +1,232 @@
+:root {
+  --primary: #183b55;
+  --primary-hover: #24516f;
+  --accent: #087f8c;
+  --accent-soft: #e8f4f4;
+  --background: #f5f7fa;
+  --surface: #fff;
+  --text: #172c3c;
+  --muted: #566b7b;
+  --border: #dce4eb;
+  --danger: #ac2938;
+  --danger-soft: #fff0f1;
+  --success: #176b50;
+  --success-soft: #eaf5ee;
+  --warning: #866012;
+  --warning-soft: #fff6df;
+  --font-body: "Segoe UI", system-ui, sans-serif;
+  --font-display: Georgia, Cambria, serif;
+  --font-utility: Consolas, ui-monospace, monospace;
+  --radius: 0.625rem;
+  --radius-card: 0.875rem;
+  --space-control: 0.75rem;
+  --space-panel: 1.5rem;
+  --space-section: 2rem;
+  --scroll-thumb: #a7bac6;
+  --scroll-track: #eef2f5;
+  --scroll-hover: #819aaa;
+  --scroll-active: #617d8f;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+* {
+  box-sizing: border-box;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border: 2px solid var(--scroll-track);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-hover);
+}
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scroll-active);
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+button,
+input,
+textarea,
+a {
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+button:disabled {
+  opacity: 0.5;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.3;
+}
+p {
+  overflow-wrap: anywhere;
+}
+h1 {
+  font-family: var(--font-display);
+  font-size: 2.15rem;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+h3 {
+  font-size: 1.05rem;
+}
+small {
+  font-size: 0.8rem;
+}
+svg {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  appearance: none;
+  background: #e9eef2;
+  color: var(--accent);
+}
+progress::-webkit-progress-bar {
+  background: #e9eef2;
+  border-radius: 20px;
+}
+progress::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 20px;
+}
+progress::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: 20px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+}
+th {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+  background: #fafbfd;
+}
+td,
+th {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+tr:last-child td {
+  border-bottom: 0;
+}
+tbody tr:hover {
+  background: #fafcfd;
+}
+td {
+  overflow-wrap: anywhere;
+}
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+textarea {
+  resize: none;
+}
+/* User motion preference must override component animation declarations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  * {
+    scrollbar-color: auto;
+  }
+  progress {
+    forced-color-adjust: auto;
+  }
+  button,
+  a,
+  input,
+  textarea {
+    border-color: ButtonText;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    outline-color: Highlight;
+  }
+}
