@@ -81,9 +81,12 @@ public sealed class ProjectService(AppDbContext db, ICurrentUser currentUser, Ti
 
     public async Task<IReadOnlyList<MemberDto>> ListMembersAsync(Guid id, CancellationToken ct)
     {
-        var project = await LoadAsync(id, false, false, ct);
-        var ids = project.Members.Select(x => x.UserId).ToArray();
-        return await db.Users.AsNoTracking().Where(x => ids.Contains(x.Id)).OrderBy(x => x.DisplayName).Select(x => new MemberDto(x.Id, x.DisplayName, x.Email!, x.Id == project.OwnerId)).ToListAsync(ct);
+        var project = await Accessible.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.OwnerId }).SingleOrDefaultAsync(ct) ?? throw ApiException.NotFound();
+        return await (from membership in db.ProjectMembers.AsNoTracking()
+                      join user in db.Users.AsNoTracking() on membership.UserId equals user.Id
+                      where membership.ProjectId == id
+                      orderby user.DisplayName
+                      select new MemberDto(user.Id, user.DisplayName, user.Email!, user.Id == project.OwnerId)).ToListAsync(ct);
     }
 
     public async Task<MemberDto> AddMemberAsync(Guid id, AddMemberRequest request, CancellationToken ct)

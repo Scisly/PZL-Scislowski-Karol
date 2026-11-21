@@ -20,6 +20,16 @@ public sealed class NagerHolidayClientTests
         Assert.Equal(new PublicHoliday(new(2026, 5, 1), "Labour Day"), Assert.Single(result));
     }
 
+    [Fact]
+    public async Task MapsFirstCalendarDateWhenRequestedYearIsOne()
+    {
+        const string json = """
+            [{"date":"0001-01-01","name":"New Year's Day","countryCode":"PL","nationalHoliday":true,"holidayTypes":["Public"]}]
+            """;
+        var result = await Client(new ReplyHandler(HttpStatusCode.OK, json)).GetPublicHolidaysAsync(1);
+        Assert.Equal(new PublicHoliday(new(1, 1, 1), "New Year's Day"), Assert.Single(result));
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.NotFound)]
     [InlineData(HttpStatusCode.TooManyRequests)]
@@ -36,6 +46,20 @@ public sealed class NagerHolidayClientTests
     {
         var error = await Assert.ThrowsAsync<ApiException>(() => Client(new ReplyHandler(HttpStatusCode.OK, "not json")).GetPublicHolidaysAsync(2026));
         Assert.Equal(503, error.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("[null]", 2026)]
+    [InlineData("[{\"date\":\"2026-05-01\",\"name\":\"Labour Day\",\"countryCode\":\"PL\",\"nationalHoliday\":true,\"holidayTypes\":[\"Public\"]},null]", 2026)]
+    [InlineData("{}", 2026)]
+    [InlineData("[{}]", 2026)]
+    [InlineData("[{\"date\":\"0001-01-01\",\"name\":\"Wrong year\",\"countryCode\":\"PL\",\"nationalHoliday\":true,\"holidayTypes\":[\"Public\"]}]", 2026)]
+    [InlineData("[{\"date\":\"2026-05-01\",\"name\":\"Missing type\",\"countryCode\":\"PL\",\"nationalHoliday\":true,\"holidayTypes\":[null]}]", 2026)]
+    public async Task InvalidProviderModelHasSafe503(string json, int year)
+    {
+        var error = await Assert.ThrowsAsync<ApiException>(() => Client(new ReplyHandler(HttpStatusCode.OK, json)).GetPublicHolidaysAsync(year));
+        Assert.Equal(503, error.StatusCode);
+        Assert.Equal("holiday_invalid_response", error.Code);
     }
 
     [Fact]

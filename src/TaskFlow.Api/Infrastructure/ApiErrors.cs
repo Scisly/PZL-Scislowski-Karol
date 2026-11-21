@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +27,7 @@ public static class ApiProblems
             Type = $"https://httpstatuses.com/{status}"
         };
         problem.Extensions["errorCode"] = code;
-        problem.Extensions["traceId"] = Activity.Current?.Id ?? context.TraceIdentifier;
+        problem.Extensions["traceId"] = RequestTrace.GetId(context);
         return problem;
     }
 
@@ -46,7 +45,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is OperationCanceledException && context.RequestAborted.IsCancellationRequested)
         {
             context.Response.StatusCode = 499;
-            logger.LogInformation("Request cancelled by client. TraceId {TraceId}", context.TraceIdentifier);
+            logger.LogInformation("Request cancelled by client. TraceId {TraceId}", RequestTrace.GetId(context));
             return true;
         }
         var (status, code, detail) = exception switch
@@ -59,8 +58,8 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             _ => (500, "internal_error", "Wystąpił nieoczekiwany błąd. Spróbuj ponownie.")
         };
         // Exception messages can contain data or provider details. Log type, status and trace only.
-        if (status >= 500) logger.LogError("Request failed: {ExceptionType} with {StatusCode}. TraceId {TraceId}", exception.GetType().Name, status, context.TraceIdentifier);
-        else logger.LogWarning("Request rejected: {ErrorCode} with {StatusCode}. TraceId {TraceId}", code, status, context.TraceIdentifier);
+        if (status >= 500) logger.LogError("Request failed: {ExceptionType} with {StatusCode}. TraceId {TraceId}", exception.GetType().Name, status, RequestTrace.GetId(context));
+        else logger.LogWarning("Request rejected: {ErrorCode} with {StatusCode}. TraceId {TraceId}", code, status, RequestTrace.GetId(context));
         await ApiProblems.WriteAsync(context, status, code, detail);
         return true;
     }
