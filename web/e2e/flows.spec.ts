@@ -283,9 +283,18 @@ test("member works with shared tasks and comments while ownership remains enforc
     await dialog.getByLabel("Tytuł zadania").fill("Zadanie członka zespołu");
     await select(page, "Osoba odpowiedzialna", member.displayName);
     await select(page, "Status", "W toku");
-    await dialog
-      .getByRole("button", { name: "Dodaj zadanie", exact: true })
-      .click();
+    const [createdTaskResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/tasks",
+      ),
+      dialog
+        .getByRole("button", { name: "Dodaj zadanie", exact: true })
+        .click(),
+    ]);
+    expect(createdTaskResponse.status()).toBe(201);
+    const createdTask = (await createdTaskResponse.json()) as { id: string };
     await page.getByRole("link", { name: "Moje zadania", exact: true }).click();
     await page
       .getByRole("button", { name: "Zadanie członka zespołu", exact: true })
@@ -317,11 +326,26 @@ test("member works with shared tasks and comments while ownership remains enforc
       page.getByText("Poprawiona wersja komentarza", { exact: true }),
     ).toHaveCount(0);
     await dialog.getByRole("button", { name: "Usuń", exact: true }).click();
-    await page
-      .getByRole("dialog")
-      .last()
-      .getByRole("button", { name: "Usuń", exact: true })
-      .click();
+    const [deletedTaskResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "DELETE" &&
+          new URL(response.url()).pathname === `/api/tasks/${createdTask.id}`,
+      ),
+      page
+        .getByRole("dialog")
+        .last()
+        .getByRole("button", { name: "Usuń", exact: true })
+        .click(),
+    ]);
+    expect(deletedTaskResponse.status()).toBe(204);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: "Zadanie członka zespołu",
+        exact: true,
+      }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("heading", { name: "Moje zadania" }),
     ).toBeVisible();
