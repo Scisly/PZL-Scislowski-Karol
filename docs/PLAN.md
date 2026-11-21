@@ -4,6 +4,8 @@
 
 Indywidualny projekt zaliczeniowy Karola Scisłowskiego: współpraca zespołów studenckich nad projektami, zadaniami i komentarzami. Frontend React/TypeScript/Vite, backend ASP.NET Core 10 i EF Core/Npgsql, PostgreSQL 18. Lokalny start i Docker Compose, bez hostingu publicznego.
 
+Aktualizacja decyzji autora z 2026-11-21: repozytorium **publiczne** na koncie Karola (`Scisly`), https://github.com/Scisly/PZL-Scislowski-Karol. Zastępuje to pierwotne założenie prywatnego repozytorium. Publicznie dostępny jest kod aplikacji i opracowana dokumentacja; materiały prowadzącego i lokalne sekrety pozostają ignorowane.
+
 ## Zakres
 
 Rejestracja i logowanie, projekty z przedmiotem i wymaganym terminem, członkostwo, zadania z opcjonalnym przypisaniem i terminem, Kanban bez przeciągania, lista i filtry, komentarze, archiwizacja/przywracanie oraz lista kont dla administratora. Interfejs polski, jasny i responsywny. Bez e-maili, załączników, czatu, SSO, realtime i transferu własności.
@@ -49,4 +51,4 @@ Nager API v4: https://nagerholidays.com/api/v4/Holidays/PL/{year}. Typowane DTO 
 11. Dockerfile/Compose, migrator, bootstrap .env, CI quality gate i osobny udokumentowany failed-test branch z naprawą.
 12. Finalne README, AI register, known issues, wkład autora, prezentacja i przećwiczone demo.
 
-Testy powstają wraz z funkcjami. Źródła prowadzącego pozostają lokalnie. Nie fabrykujemy wcześniejszej historii, review ani wykonania sprawdzeń. Udostępnienie prowadzącemu wymaga wskazania jego konta przez autora; oddanie Moodle pozostaje czynnością autora.
+Testy powstają wraz z funkcjami. Źródła prowadzącego pozostają lokalnie. Nie fabrykujemy wcześniejszej historii, review ani wykonania sprawdzeń. Publiczne repozytorium można otworzyć bez zaproszenia; oddanie Moodle pozostaje czynnością autora.
