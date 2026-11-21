@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using TaskFlow.Api.Contracts;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Infrastructure;
+using TaskFlow.Api.Services;
 
 namespace TaskFlow.Api.Auth;
 
@@ -22,9 +23,18 @@ public sealed class TaskFlowClaimsFactory(UserManager<ApplicationUser> users, Ro
     }
 }
 
-public sealed class AuthService(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, IConfiguration configuration, TimeProvider clock, ILogger<AuthService> logger)
+public sealed class AuthService(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, IConfiguration configuration, TimeProvider clock, ILogger<AuthService> logger, ICurrentUser currentUser)
 {
-    public async Task<UserDto> ToDtoAsync(ApplicationUser user) => new(user.Id, user.DisplayName, user.Email!, (await users.GetRolesAsync(user)).ToArray());
+    private async Task<UserDto> ToDtoAsync(ApplicationUser user) => new(user.Id, user.DisplayName, user.Email!, (await users.GetRolesAsync(user)).ToArray());
+
+    public async Task<UserDto> GetCurrentUserAsync()
+    {
+        var user = await users.FindByIdAsync(currentUser.Id.ToString())
+            ?? throw new ApiException(401, "unauthorized", "Wymagane logowanie.");
+        return await ToDtoAsync(user);
+    }
+
+    public Task LogoutAsync() => signIn.SignOutAsync();
 
     public async Task<UserDto> RegisterAsync(RegisterRequest request)
     {

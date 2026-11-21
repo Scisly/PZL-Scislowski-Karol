@@ -1,16 +1,13 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Api.Auth;
 using TaskFlow.Api.Contracts;
-using TaskFlow.Api.Data;
-using TaskFlow.Api.Infrastructure;
 
 namespace TaskFlow.Api.Controllers;
 
 [ApiController, Route("api/auth")]
-public sealed class AuthController(AuthService auth, UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : ControllerBase
+public sealed class AuthController(AuthService auth) : ControllerBase
 {
     [HttpGet("csrf"), AllowAnonymous]
     public IActionResult Csrf([FromServices] IAntiforgery antiforgery)
@@ -23,13 +20,9 @@ public sealed class AuthController(AuthService auth, UserManager<ApplicationUser
     [HttpPost("login"), AllowAnonymous]
     public async Task<IActionResult> Login(LoginRequest request) => Ok(await auth.LoginAsync(request));
     [HttpGet("me"), Authorize]
-    public async Task<IActionResult> Me()
-    {
-        var user = await users.FindByIdAsync(User.FindFirst("sub")?.Value ?? "") ?? throw new ApiException(401, "unauthorized", "Wymagane logowanie.");
-        return Ok(await auth.ToDtoAsync(user));
-    }
+    public async Task<IActionResult> Me() => Ok(await auth.GetCurrentUserAsync());
     [HttpPost("logout"), Authorize]
-    public async Task<IActionResult> Logout() { await signIn.SignOutAsync(); return NoContent(); }
+    public async Task<IActionResult> Logout() { await auth.LogoutAsync(); return NoContent(); }
     [HttpPost("token"), AllowAnonymous]
     public async Task<IActionResult> Token(LoginRequest request) => Ok(await auth.TokenAsync(request));
 }
