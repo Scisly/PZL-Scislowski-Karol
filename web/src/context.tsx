@@ -94,8 +94,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       resetCsrf();
     }
     setExpired(false);
-    client.clear();
+    // An earlier /auth/me response must not restore the account after logout.
+    await client.cancelQueries({ queryKey: ["session"] });
     client.setQueryData(["session"], null);
+    // Keep the observed session query in place. Clearing it would recreate the
+    // old authenticated tree while its protected queries are being removed.
+    client.removeQueries({
+      predicate: (query) => query.queryKey[0] !== "session",
+    });
+    client.getMutationCache().clear();
   }
   return (
     <SessionContext.Provider
