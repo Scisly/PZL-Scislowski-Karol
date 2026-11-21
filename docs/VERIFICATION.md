@@ -12,6 +12,8 @@ Pełne lokalne polecenie `node scripts/verify.mjs --e2e` zakończyło się kodem
 - Potwierdzono cookie/CSRF, prawdziwy JWT, odrzucenie błędnego Bearera mimo poprawnego cookie, role, 401/403/404, CRUD i filtry, przypisania, archiwum, komentarze, reguły terminów, Problem Details 500 i korelację traceId.
 - `dotnet format src/TaskFlow.Api/TaskFlow.Api.csproj --verify-no-changes --no-restore`: kod 0. Kontrola podatnych pakietów wraz z transytywnymi: 0 wykrytych podatności w sprawdzonych źródłach.
 
+Przy ponownym audycie 12 tematów punkt wyjścia `2ecb924` przeszedł 28 testów jednostkowych i 12 integracyjnych. Po wydzieleniu operacji konta, uzupełnieniu Swaggera i dodaniu testu awarii doradcy `dotnet test TaskFlow.slnx --configuration Release` przeszedł **29 testów jednostkowych i 13 integracyjnych**. Sprawdzono `403` dla JWT studenta, schemat odpowiedzi `201`, `204` bez treści i oznaczenie Bearer przy chronionych operacjach. Nowy test OpenAPI wykrył pustą referencję do Bearer przed jej powiązaniem z dokumentem. Po poprawce test przeszedł.
+
 ## Frontend i przeglądarka
 
 Wykonano npm ci, lint, typecheck, format:check i build. **21 testów Vitest przechodzi**. Kontrola zależności npm ci nie wykazała podatności. Strict UI audit: 0 usterek. DESIGN lint: 0 błędów; nieblokujące ostrzeżenia dotyczą tokenów opisanych wyłącznie w dokumentacji.
@@ -38,6 +40,8 @@ Pierwszy kompletny zielony przebieg, commit `20b8e8d5ee7aee1abe9229faafce24d2bf0
 Późniejszy [run main 44893653696](https://github.com/Scisly/PZL-Scislowski-Karol/actions/runs/44893653696) wykrył niezależną nawigację testu przed zakończeniem wylogowania. Jego wynik jest nieudany, mimo wcześniejszego sukcesu PR i lokalnego pełnego skryptu. Przyczynę oraz poprawkę synchronizacji opisuje CI_QUALITY_GATE.md.
 
 **Końcowa poprawka sesji:** commit `c6723f97af2639030cbc43bedeed4ba0c378bf90`. Dwie regresje najpierw wykazały problem, a potem przeszły. Po zmianie wykonano typecheck, ESLint bez ostrzeżeń, 21 testów Vitest, build, przebudowę obrazu Compose, 5 smoke checks i wszystkie 4 przepływy Playwright (16,3 s). Osobny przegląd AI nie pozostawił uwag P1/P2. Aktualny wynik końcowej gałęzi należy sprawdzić w [GitHub Actions](https://github.com/Scisly/PZL-Scislowski-Karol/actions), dla wskazanego commita; ten raport nie przewiduje wyniku kolejnego uruchomienia.
+
+Przebieg po scaleniu PR #8 zakończył się sukcesem dla `2ecb924`. Wszystkie trzy zadania CI przeszły. [Run 44897524702](https://github.com/Scisly/PZL-Scislowski-Karol/actions/runs/44897524702).
 
 ## Materiały do obrony
 

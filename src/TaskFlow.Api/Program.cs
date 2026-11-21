@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using TaskFlow.Api.Auth;
+using TaskFlow.Api.Contracts;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Infrastructure;
 using TaskFlow.Api.Integrations;
@@ -121,9 +122,10 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskFlow API", Version = "v1", Description = "Demo: uzyskaj JWT przez POST /api/auth/token, następnie użyj Authorize. Cookies Reacta wymagają X-CSRF-TOKEN." });
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" });
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskFlow API", Version = "v1", Description = "W Swagger UI pobierz JWT przez POST /api/auth/token, a następnie użyj Authorize. Przeglądarka może też używać cookie sesji. Zapis bez JWT, w tym rejestracja i logowanie, wymaga nagłówka X-CSRF-TOKEN z GET /api/auth/csrf." });
+    options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" });
+    options.OperationFilter<SwaggerOperationFilter>();
+    options.DocumentFilter<SwaggerReferenceFilter>();
 });
 var app = builder.Build();
 if (migrateOnly)
@@ -159,15 +161,16 @@ app.MapGet("/api/compare/tasks", async (Guid? projectId, string? status, Guid? a
         if (!Enum.TryParse<WorkStatus>(status, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed)) throw new ApiException(400, "validation_error", "Nieprawidłowy status zadania.");
         filter = parsed;
     }
-    return Results.Ok(await tasks.ListAsync(projectId, filter, assignedUserId, ct));
-}).RequireAuthorization().WithTags("Comparison");
-app.MapGet("/api/compare/tasks/{id:guid}", async (Guid id, ITaskService tasks, CancellationToken ct) => Results.Ok(await tasks.GetAsync(id, ct))).RequireAuthorization().WithTags("Comparison");
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+    return TypedResults.Ok(await tasks.ListAsync(projectId, filter, assignedUserId, ct));
+}).RequireAuthorization().WithTags("Comparison").ProducesProblem(400).ProducesProblem(404);
+app.MapGet("/api/compare/tasks/{id:guid}", async (Guid id, ITaskService tasks, CancellationToken ct) => TypedResults.Ok(await tasks.GetAsync(id, ct)))
+    .RequireAuthorization().WithTags("Comparison").ProducesProblem(404);
+app.MapGet("/api/health", () => TypedResults.Ok(new HealthDto("ok"))).AllowAnonymous();
 app.MapGet("/api/health/ready", async (AppDbContext db, CancellationToken ct) =>
 {
     if (!await db.Database.CanConnectAsync(ct)) throw new ApiException(503, "database_unavailable", "Baza danych jest niedostępna.");
-    return Results.Ok(new { status = "ready" });
-}).AllowAnonymous();
+    return TypedResults.Ok(new HealthDto("ready"));
+}).AllowAnonymous().ProducesProblem(503);
 app.Map("/api/{**path}", (HttpContext context) => Results.Problem(ApiProblems.Create(context, 404, "not_found"))).AllowAnonymous();
 app.MapFallbackToFile("index.html");
 await app.RunAsync();

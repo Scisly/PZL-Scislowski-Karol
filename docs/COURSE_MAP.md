@@ -1,21 +1,21 @@
 # Mapa wymagań 12 tematów
 
-Źródło wymagań stanowią przekazane zadania i lokalne materiały prowadzącego. Poniższa mapa wskazuje implementację i sposób sprawdzenia. Faktyczne wyniki uruchomień oraz odnośniki CI znajdują się w VERIFICATION.md.
+Mapa wskazuje kod, dokumentację i pull requesty związane z zadaniami prowadzącego. Wyniki uruchomień i odnośniki CI są w [raporcie weryfikacji](VERIFICATION.md).
 
-| Temat | Implementacja / dowód | Jak sprawdzić |
+| Temat | Dowód i sposób sprawdzenia | PR |
 | --- | --- | --- |
-| 1 Git | main, branche feature, logiczne commity, PR-y i jawne review wspomagane AI | git log --graph --all; historia PR w GitHub |
-| 2 Model | Domain: Project, TaskItem, Comment, ProjectMember; ApplicationUser w Api; enumy, DTO i DOMAIN.md | Build rozwiązania i diagram |
-| 3 EF | AppDbContext, PostgreSQL/Npgsql, InitialCreate, CRUD | Migracje na świeżym PostgreSQL w testach; create/read/update/delete API |
-| 4 Usługi/DI | IProjectService, ITaskService, ICommentService, IHolidayClient; Scoped, constructor injection, DomainRules | Cienkie kontrolery; unit doradcy; brak ogólnego Repository |
-| 5 API | Kontrolery CRUD i dwa GET Minimal API /api/compare/tasks | Swagger, integracyjne CRUD/filtry/statusy |
-| 6 Auth | Identity cookie, CSRF, JWT, Student/Admin, sub, CanCreateProjects | Prawdziwy JWT, 401/403, izolacja projektów i Admin bez obejścia |
-| 7 Błędy | GlobalExceptionHandler, ApiProblems, RequestTrace, structured logging | 400/404/409/500 i równość traceId odpowiedź/nagłówek |
-| 8 Integracja | Typed NagerHolidayClient jako Adapter, własne DTO, timeout i anulowanie, Stub | Unit błędów dostawcy, niepoprawny JSON, Live/Stub i osobne żądanie doradcy |
-| 9 Testy | xUnit, fake klienta i czasu, WebApplicationFactory/Testcontainers, Playwright | Jedno polecenie dotnet test, pełny scripts/verify.mjs --e2e |
-| 10 Jakość | QUALITY.md: rzeczywisty baseline, 5 problemów, 3 naprawy i Extract Class | Wyniki przed/po, analyzer, nullable/warnings i review |
-| 11 Docker/CI | Dockerfile multi-stage, .dockerignore, Compose migrate, GitHub Actions | Budowa/start/smoke/E2E i kontrolowany failed test → failed CI → naprawa |
-| 12 Obrona | README, AI_REGISTER, KNOWN_ISSUES, DEMO, DEFENSE i prezentacja | Przećwiczenie scenariusza i komplet materiałów do Moodle |
+| 1. Git | `main`, gałęzie `feature/`, historia commitów, scalenia i jawnie oznaczone review AI. Historia lokalna: `git log --graph --all`. | [#1](https://github.com/Scisly/PZL-Scislowski-Karol/pull/1) |
+| 2. Model | `Project`, `TaskItem`, `Comment` i `ProjectMember` w Domain, `ApplicationUser` w Api. Relacje i diagram opisano w [modelu domenowym](DOMAIN.md). | [#2](https://github.com/Scisly/PZL-Scislowski-Karol/pull/2) |
+| 3. EF Core | `AppDbContext`, Npgsql i migracja `InitialCreate`. Test integracyjny odtwarza bazę PostgreSQL, po czym sprawdza CRUD. Przykłady LINQ poniżej. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3) |
+| 4. Usługi i DI | Usługi z interfejsami, wstrzykiwanie przez konstruktor i lifetime `Scoped`. Wydzielenie listy kont, odczytu bieżącego użytkownika i wylogowania opisano poniżej. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3), [#4](https://github.com/Scisly/PZL-Scislowski-Karol/pull/4) |
+| 5. API | CRUD w kontrolerach i dwa porównawcze odczyty Minimal API. [Porównanie](API.md#kontroler-i-minimal-api) wskazuje różnice i wspólną usługę. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3) |
+| 6. Uwierzytelnianie i autoryzacja | Swagger, Identity z cookie i CSRF, JWT, role Student i Admin, identyfikator `sub` oraz polityka `CanCreateProjects`. Testy weryfikują 401, 403 i izolację projektów. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3) |
+| 7. Błędy i logi | Globalny handler, 400/404/409/500 i korelacja nagłówka z logami. [Przykład Problem Details](API.md#przykładowy-problem-details-i-diagnostyka) oraz instrukcja diagnostyki. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3), [#4](https://github.com/Scisly/PZL-Scislowski-Karol/pull/4) |
+| 8. Integracja | Typowany adapter Nager, osobne DTO, timeout, anulowanie i Stub. [Tabela scenariuszy](API.md#sprawdzone-scenariusze-doradcy-terminu) wskazuje testy oraz wynik próby Live. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3), [#4](https://github.com/Scisly/PZL-Scislowski-Karol/pull/4) |
+| 9. Testy | xUnit z fake klientem i zegarem, WebApplicationFactory i Testcontainers z osobną bazą, Playwright. Pełne sprawdzenie: `node scripts/verify.mjs --e2e`. | [#3](https://github.com/Scisly/PZL-Scislowski-Karol/pull/3), [#6](https://github.com/Scisly/PZL-Scislowski-Karol/pull/6) |
+| 10. Jakość | Baseline, pięć problemów, trzy naprawy, Extract Class, analiza statyczna i wyniki przed i po. [Raport jakości](QUALITY.md) zawiera kartę porównawczą. | [#4](https://github.com/Scisly/PZL-Scislowski-Karol/pull/4) |
+| 11. Docker i CI | Wieloetapowy Dockerfile, Compose z migratorem, GitHub Actions. [Dowód quality gate](CI_QUALITY_GATE.md) pokazuje kontrolowane niepowodzenie i wynik po naprawie. | [#6](https://github.com/Scisly/PZL-Scislowski-Karol/pull/6), [#7](https://github.com/Scisly/PZL-Scislowski-Karol/pull/7) |
+| 12. Obrona i oddanie | Prezentacja PPTX i PDF, scenariusz demo, pytania do obrony, rejestr AI, znane ograniczenia i wkład autora. [Materiały do Moodle](SUBMISSION.md) zawierają listę plików i czynności autora. | [#8](https://github.com/Scisly/PZL-Scislowski-Karol/pull/8) |
 
 ## Trzy zapytania LINQ i tracking
 
@@ -25,9 +25,17 @@
 
 Odczyty używają AsNoTracking. Zapis korzysta z tracked encji i SaveChangesAsync. Queryable jest materializowany asynchronicznie po filtrowaniu. Migracje są przechowywane razem z modelem.
 
-## SRP, DIP i Adapter
+## Wydzielenie operacji, SRP i DIP
 
-Kontroler obsługuje HTTP, usługa przypadek użycia, DomainRules regułę, a klient integracyjny protokół dostawcy. Kontrolery zależą od interfejsów usług; DeadlineAdvisor zależy od IHolidayClient. Scoped odpowiada cyklowi życia DbContext. Repository nie dodano, ponieważ nie wnosi tu osobnej odpowiedzialności. Adapter oddziela DTO Nager od PublicHoliday aplikacji.
+| Operacja | Przed wydzieleniem | Po wydzieleniu |
+| --- | --- | --- |
+| Lista kont administratora | `AdminUsersController.Get` sam pobierał konta i role oraz tworzył DTO. | `IUserDirectoryService.ListAsync` pobiera konta i role. Kontroler składa odpowiedź HTTP. |
+| Odczyt bieżącego użytkownika | `AuthController.Me` odczytywał konto i prosił usługę o przygotowanie DTO. | `AuthService.GetCurrentUserAsync` odczytuje identyfikator przez `ICurrentUser`, pobiera konto i zwraca DTO. |
+| Wylogowanie | `AuthController.Logout` bezpośrednio wywoływał `SignInManager`. | `AuthService.LogoutAsync` zamyka sesję, a kontroler zwraca status 204. |
+
+Przed zmianami źródła były w commitach `7b9f49d` (lista kont) i `2ecb924` (konto i sesja). Wydzielenie listy widać w commicie `f1fe90c`, a odczytu konta i wylogowania w `5c16d21`. Aktualny kod jest w [UserDirectoryService](../src/TaskFlow.Api/Services/UserDirectoryService.cs), [AuthService](../src/TaskFlow.Api/Auth/AuthServices.cs) i [AuthController](../src/TaskFlow.Api/Controllers/AuthController.cs).
+
+Kontroler obsługuje HTTP, usługa wykonuje przypadek użycia, a `DomainRules` sprawdza reguły biznesowe. Kontrolery zadań i projektów otrzymują interfejsy usług, a `DeadlineAdvisor` otrzymuje `IHolidayClient`. Adapter oddziela DTO Nager od wewnętrznego `PublicHoliday`. Usługi mają zakres żądania HTTP, zgodny z cyklem życia `DbContext`. Operacje bazy korzystają bezpośrednio z EF Core, ponieważ dodatkowe ogólne Repository dublowałoby jego interfejs.
 
 ## Historia i autorstwo
 

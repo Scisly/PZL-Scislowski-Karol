@@ -13,5 +13,6 @@ Autor: Karol Scisłowski. Projekt powstaje ze znaczącym wsparciem Codex. Ten re
 | 2026-11-21 | Docker i CI | Obraz wieloetapowy, Compose, bootstrap sekretów i pipeline | Lokalne build/start/smoke, rzeczywisty kalendarz Live, GitHub Actions i kontrolowany failing test | modified: wyizolowano developerską bazę, poprawiono synchronizację E2E |
 | 2026-11-21 | Dokumentacja i prezentacja | README, diagram, scenariusz, pytania i 14 slajdów | Kontrola odnośników, render wszystkich slajdów i stron PDF, finalizer PPTX | accepted po korekcie diagramu i sprawdzeniu układu |
 | 2026-11-21 | Review | Osobne konteksty agentów oceniają zgodność i jakość | Uwagi P2 otrzymały regresje i poprawki; komentarze PR jawnie opisują wsparcie AI | accepted; nie jest to niezależna akceptacja drugiego człowieka |
+| 2026-11-21 | Audyt 12 tematów | Porównano kod i historię z wymaganiami. Wydzielono operacje konta, uzupełniono metadane Swaggera i dowody do Moodle. | 29 testów jednostkowych i 13 integracyjnych, porównanie wygenerowanej specyfikacji, przebudowa Compose i sprawdzenie odnośników. | modified po poprawieniu referencji Bearer wskazanej przez test i przegląd. |
 
 Autor przed oddaniem powinien przeczytać i zrozumieć kod, powtórzyć demonstrację i potwierdzić sprawdzenia. Przeglądy AI są jawnie oznaczane i nie zastępują niezależnego review innej osoby.

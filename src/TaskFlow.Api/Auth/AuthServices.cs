@@ -69,7 +69,7 @@ public sealed class AuthService(UserManager<ApplicationUser> users, SignInManage
         return await ToDtoAsync(user);
     }
 
-    public async Task<object> TokenAsync(LoginRequest request)
+    public async Task<DemoTokenDto> TokenAsync(LoginRequest request)
     {
         if (!configuration.GetValue<bool>("Demo:Enabled")) throw ApiException.NotFound();
         var user = await CheckCredentialsAsync(request);
@@ -78,7 +78,7 @@ public sealed class AuthService(UserManager<ApplicationUser> users, SignInManage
         claims.AddRange((await users.GetRolesAsync(user)).Select(x => new Claim("role", x)));
         var token = new JwtSecurityToken(issuer: "TaskFlow", audience: "TaskFlow", claims: claims, notBefore: clock.GetUtcNow().UtcDateTime, expires: expires.UtcDateTime, signingCredentials: new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)), SecurityAlgorithms.HmacSha256));
         logger.LogInformation("Demo token issued to user {UserId}", user.Id);
-        return new { accessToken = new JwtSecurityTokenHandler().WriteToken(token), expiresAt = expires };
+        return new(new JwtSecurityTokenHandler().WriteToken(token), expires);
     }
 }
 

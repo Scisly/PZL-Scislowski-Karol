@@ -81,6 +81,8 @@ Polecenia lokalne wymagają connection stringa do dostępnego serwera. Nie zapis
 
 Domain jest niezależny od HTTP, EF i Identity. Api zawiera cienkie kontrolery, request/response DTO, usługi, dostęp do danych i integrację. Constructor injection i `Scoped` łączą usługi z zakresem `DbContext`. SRP: obsługa HTTP, reguły i klient zewnętrzny mają odrębne odpowiedzialności. DIP: kontrolery zależą od interfejsów usług, a doradca terminu od `IHolidayClient`.
 
+Historia Git pokazuje przeniesienie listy kont do `UserDirectoryService` oraz odczytu bieżącego konta i wylogowania do `AuthService`. Kontrolery przekazują wykonanie do usług i zwracają odpowiedzi HTTP.
+
 Nie dodano ogólnego Repository, ponieważ powielałoby operacje EF Core bez dodatkowej wartości. Klient Nager jest **Adapterem** zewnętrznego DTO do własnego `PublicHoliday`. [Plan i decyzje](docs/PLAN.md), [audyt jakości](docs/QUALITY.md).
 
 ## API
@@ -137,6 +139,6 @@ Port 8080 jest wystawiony na loopback. Konfiguracja i hasła pochodzą z `.env`,
 
 Równoczesna edycja stosuje ostatni poprawny zapis. Wersja 1 nie ma realtime, paginacji, e-maili, resetu hasła, SSO, załączników ani publicznego wdrożenia. Swagger/JWT i konta demo są funkcjami jawnie włączonego środowiska demonstracyjnego. Dalsze ograniczenia: [known issues](docs/KNOWN_ISSUES.md).
 
-[Scenariusz pokazu](docs/DEMO.md) · [Pytania do obrony](docs/DEFENSE.md) · [Materiały do Moodle](docs/SUBMISSION.md) · [Rejestr AI](docs/AI_REGISTER.md).
+[Mapa 12 tematów](docs/COURSE_MAP.md) · [Scenariusz pokazu](docs/DEMO.md) · [Pytania do obrony](docs/DEFENSE.md) · [Materiały do Moodle](docs/SUBMISSION.md) · [Rejestr AI](docs/AI_REGISTER.md).
 
 Materiały prowadzącego i oryginalne archiwa pozostają lokalnie w `materialy` i nie są częścią publicznego repozytorium. Oddanie w Moodle i przećwiczenie samodzielnego wyjaśnienia kodu wykonuje autor.
