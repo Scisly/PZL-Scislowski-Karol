@@ -63,6 +63,7 @@ public sealed class ApiBehaviorTests(TaskFlowFactory factory)
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/projects")).StatusCode);
         var jwtUser = await client.GetFromJsonAsync<JsonElement>("/api/auth/me");
         Assert.Equal(user.Id, jwtUser.GetProperty("id").GetString());
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/admin/users")).StatusCode);
         var createdWithoutCsrf = await client.PostAsJsonAsync("/api/projects", new
         {
             name = "Projekt przez JWT", courseName = "API", deadline = TaskFlowFactory.ReferenceDate.AddDays(20)

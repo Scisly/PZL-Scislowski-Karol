@@ -58,6 +58,19 @@ Po register/login/logout frontend odrzuca poprzedni token CSRF i pobiera nowy. A
 - DELETE `/api/tasks/{id}` →204.
 - GET `/api/compare/tasks` (te same filtry) i GET `/api/compare/tasks/{id}` → te same DTO przez Minimal API i tę samą usługę.
 
+### Kontroler i Minimal API
+
+| Obszar | Kontroler `/api/tasks` | Minimal API `/api/compare/tasks` |
+| --- | --- | --- |
+| Definicja tras | Klasa `TasksController`, atrybuty `[Route]` i `[HttpGet]` | `MapGet` w `Program.cs`, z parametrami trasy i zapytania w sygnaturze funkcji |
+| Walidacja parametrów | Wiązanie modelu MVC i obsługa błędów przez `[ApiController]` | Wiązanie parametrów funkcji i jawna walidacja filtra `status` |
+| Autoryzacja | Atrybut `[Authorize]` | Wywołanie `.RequireAuthorization()` |
+| Zakres | Odczyt i zapis zadań | Dwa odczyty porównawcze, listy i szczegółu |
+
+Obie wersje przekazują odczyt do `ITaskService`. Zwracają te same DTO i stosują tę samą kontrolę członkostwa w serwisie. Kontroler grupuje operacje CRUD zasobu w jednej klasie. Minimal API pozwala zapisać proste odczyty bez osobnej klasy kontrolera.
+
+Kod i sprawdzenia są w [TasksController](../src/TaskFlow.Api/Controllers/TasksController.cs), [Program.cs](../src/TaskFlow.Api/Program.cs) i [ApiBehaviorTests](../tests/TaskFlow.IntegrationTests/ApiBehaviorTests.cs).
+
 ## Komentarze
 
 - GET `/api/tasks/{id}/comments` →Comment[] rosnąco według daty.
@@ -79,6 +92,43 @@ Problem Details: `{type,title,status,detail?,instance?,errorCode,traceId,errors?
 Limity: displayName100, projectName200, courseName150, opis4000, taskTitle200, comment2000. Wymagane niepuste po trim; deadlineprojektu wymagany. Rejestracja hasło minimum10znaków z małą/wielką literą, cyfrą i znakiem specjalnym, Identity hash/lockout. Nie wymagamy potwierdzenia e-mail ani resetu hasła w tej lokalnej wersji.
 
 Każda mutacja zasobów archiwum poza restore/deleteprojektu daje409. Obcy zasób404; członek bez praw właściciela403. Zduplikowane członkostwo409, konto do dodania nieznalezione404. Usunięcie właściciela lub przypisanego członka409. Admin nie omija kontroli projektu.
+
+### Przykładowy Problem Details i diagnostyka
+
+`GET /api/unknown` zwraca `404 Not Found` z typem treści `application/problem+json`. Nagłówek `X-Trace-Id` odpowiada wartości `traceId` w treści odpowiedzi.
+
+```json
+{
+  "type": "https://httpstatuses.com/404",
+  "title": "Nie znaleziono",
+  "status": 404,
+  "instance": "/api/unknown",
+  "errorCode": "not_found",
+  "traceId": "00-0d8e1ce3732e3daaa9f9b27fb26adf08-45f6e36aeb8941df-00"
+}
+```
+
+Skopiuj identyfikator z własnej odpowiedzi i wyszukaj go w logach usługi `app`. Wpis zawiera metodę HTTP, ścieżkę i status. Przy wyjątkach globalny handler dodaje kod błędu lub nazwę typu wyjątku.
+
+```powershell
+docker compose logs app | Select-String -SimpleMatch '<traceId z odpowiedzi>'
+```
+
+### Sprawdzone scenariusze doradcy terminu
+
+Doradca pobiera polskie dni ustawowo wolne od pracy przez `IHolidayClient`. Implementacja `NagerHolidayClient` jest klientem typowanym z limitem 5 sekund. Klient przekazuje token anulowania od endpointu do żądania HTTP. Tryb Stub używa testowego handlera HTTP i działa bez sieci.
+
+| Przypadek | Wynik | Dowód |
+| --- | --- | --- |
+| Poprawny kalendarz z różnymi typami i zasięgami wpisów | Zachowane są tylko dni typu `Public` z flagą `nationalHoliday` | `MapsOnlyNationalPublicHolidaysFromV4Contract` |
+| Odpowiedź Nager Live dla 1 stycznia 2027 | HTTP 200 z ostrzeżeniem `public_holiday` | Próba na działającym kontenerze opisana w raporcie weryfikacji |
+| Dostawca zwraca 404, 429 lub 503 | HTTP 503, `holiday_service_unavailable` | `ProviderHttpFailureHasSafe503` z trzema odpowiedziami HTTP |
+| Dostawca zwraca niepoprawny JSON albo niekompletny model | HTTP 503, `holiday_invalid_response` | `InvalidJsonHas503`, `InvalidProviderModelHasSafe503` |
+| Kalendarz przekracza timeout | HTTP 504, `holiday_service_timeout` | `HttpTimeoutHas504` z handlerem, który nie odpowiada |
+| Fake klienta zgłasza niedostępność w warstwie usług | Doradca zachowuje status 503 i kod `holiday_service_unavailable` | `PreservesTheControlledErrorWhenTheCalendarIsUnavailable` |
+| Klient przerywa żądanie | Token dociera do klienta kalendarza | `ForwardsCancellationToHolidayClient` |
+
+Testy adaptera są w [NagerHolidayClientTests](../tests/TaskFlow.UnitTests/NagerHolidayClientTests.cs), testy doradcy w [DeadlineAdvisorTests](../tests/TaskFlow.UnitTests/DeadlineAdvisorTests.cs), a wynik próby Live w [raporcie weryfikacji](VERIFICATION.md).
 
 ## Konfiguracja demonstracji
 

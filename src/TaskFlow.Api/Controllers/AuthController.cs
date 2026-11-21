@@ -1,35 +1,37 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Api.Auth;
 using TaskFlow.Api.Contracts;
-using TaskFlow.Api.Data;
-using TaskFlow.Api.Infrastructure;
 
 namespace TaskFlow.Api.Controllers;
 
 [ApiController, Route("api/auth")]
-public sealed class AuthController(AuthService auth, UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : ControllerBase
+public sealed class AuthController(AuthService auth) : ControllerBase
 {
     [HttpGet("csrf"), AllowAnonymous]
+    [ProducesResponseType<CsrfTokenDto>(200)]
     public IActionResult Csrf([FromServices] IAntiforgery antiforgery)
     {
         Response.Headers.CacheControl = "no-store";
-        return Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
+        return Ok(new CsrfTokenDto(antiforgery.GetAndStoreTokens(HttpContext).RequestToken));
     }
     [HttpPost("register"), AllowAnonymous]
+    [ProducesResponseType<UserDto>(201)]
+    [ProducesResponseType<ProblemDetails>(409, "application/problem+json")]
     public async Task<IActionResult> Register(RegisterRequest request) => StatusCode(201, await auth.RegisterAsync(request));
     [HttpPost("login"), AllowAnonymous]
+    [ProducesResponseType<UserDto>(200)]
+    [ProducesResponseType<ProblemDetails>(401, "application/problem+json")]
     public async Task<IActionResult> Login(LoginRequest request) => Ok(await auth.LoginAsync(request));
     [HttpGet("me"), Authorize]
-    public async Task<IActionResult> Me()
-    {
-        var user = await users.FindByIdAsync(User.FindFirst("sub")?.Value ?? "") ?? throw new ApiException(401, "unauthorized", "Wymagane logowanie.");
-        return Ok(await auth.ToDtoAsync(user));
-    }
+    [ProducesResponseType<UserDto>(200)]
+    public async Task<IActionResult> Me() => Ok(await auth.GetCurrentUserAsync());
     [HttpPost("logout"), Authorize]
-    public async Task<IActionResult> Logout() { await signIn.SignOutAsync(); return NoContent(); }
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> Logout() { await auth.LogoutAsync(); return NoContent(); }
     [HttpPost("token"), AllowAnonymous]
+    [ProducesResponseType<DemoTokenDto>(200)]
+    [ProducesResponseType<ProblemDetails>(401, "application/problem+json")]
     public async Task<IActionResult> Token(LoginRequest request) => Ok(await auth.TokenAsync(request));
 }

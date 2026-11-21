@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using TaskFlow.Api.Contracts;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Infrastructure;
+using TaskFlow.Api.Services;
 
 namespace TaskFlow.Api.Auth;
 
@@ -22,9 +23,18 @@ public sealed class TaskFlowClaimsFactory(UserManager<ApplicationUser> users, Ro
     }
 }
 
-public sealed class AuthService(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, IConfiguration configuration, TimeProvider clock, ILogger<AuthService> logger)
+public sealed class AuthService(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, IConfiguration configuration, TimeProvider clock, ILogger<AuthService> logger, ICurrentUser currentUser)
 {
-    public async Task<UserDto> ToDtoAsync(ApplicationUser user) => new(user.Id, user.DisplayName, user.Email!, (await users.GetRolesAsync(user)).ToArray());
+    private async Task<UserDto> ToDtoAsync(ApplicationUser user) => new(user.Id, user.DisplayName, user.Email!, (await users.GetRolesAsync(user)).ToArray());
+
+    public async Task<UserDto> GetCurrentUserAsync()
+    {
+        var user = await users.FindByIdAsync(currentUser.Id.ToString())
+            ?? throw new ApiException(401, "unauthorized", "Wymagane logowanie.");
+        return await ToDtoAsync(user);
+    }
+
+    public Task LogoutAsync() => signIn.SignOutAsync();
 
     public async Task<UserDto> RegisterAsync(RegisterRequest request)
     {
@@ -59,7 +69,7 @@ public sealed class AuthService(UserManager<ApplicationUser> users, SignInManage
         return await ToDtoAsync(user);
     }
 
-    public async Task<object> TokenAsync(LoginRequest request)
+    public async Task<DemoTokenDto> TokenAsync(LoginRequest request)
     {
         if (!configuration.GetValue<bool>("Demo:Enabled")) throw ApiException.NotFound();
         var user = await CheckCredentialsAsync(request);
@@ -68,7 +78,7 @@ public sealed class AuthService(UserManager<ApplicationUser> users, SignInManage
         claims.AddRange((await users.GetRolesAsync(user)).Select(x => new Claim("role", x)));
         var token = new JwtSecurityToken(issuer: "TaskFlow", audience: "TaskFlow", claims: claims, notBefore: clock.GetUtcNow().UtcDateTime, expires: expires.UtcDateTime, signingCredentials: new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)), SecurityAlgorithms.HmacSha256));
         logger.LogInformation("Demo token issued to user {UserId}", user.Id);
-        return new { accessToken = new JwtSecurityTokenHandler().WriteToken(token), expiresAt = expires };
+        return new(new JwtSecurityTokenHandler().WriteToken(token), expires);
     }
 }
 

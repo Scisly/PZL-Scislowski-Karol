@@ -10,6 +10,9 @@ public sealed class NotBlankAttribute : ValidationAttribute
 }
 
 public sealed record UserDto(Guid Id, string DisplayName, string Email, string[] Roles);
+public sealed record CsrfTokenDto(string? Token);
+public sealed record DemoTokenDto(string AccessToken, DateTimeOffset ExpiresAt);
+public sealed record HealthDto(string Status);
 public sealed record ProjectDto(Guid Id, string Name, string CourseName, string? Description, DateOnly Deadline, bool IsArchived, Guid OwnerId, DateTimeOffset CreatedAt, int MemberCount, int TaskCount, int CompletedTaskCount);
 public sealed record MemberDto(Guid UserId, string DisplayName, string Email, bool IsOwner);
 public sealed record TaskDto(Guid Id, Guid ProjectId, string ProjectName, string Title, string? Description, WorkStatus Status, TaskPriority Priority, DateOnly? DueDate, Guid? AssignedUserId, string? AssignedUserName, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
