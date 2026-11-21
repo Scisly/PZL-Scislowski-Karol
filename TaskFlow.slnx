@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="src/TaskFlow.Domain/TaskFlow.Domain.csproj" />
+  <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/TaskFlow.IntegrationTests/TaskFlow.IntegrationTests.csproj" />
+  </Folder>
+  <Project Path="src/TaskFlow.Api/TaskFlow.Api.csproj" />
+  <Project Path="tests/TaskFlow.UnitTests/TaskFlow.UnitTests.csproj" />
+</Solution>
